@@ -166,7 +166,7 @@ if (refreshMsg.getDomainType() == MMT_MARKET_PRICE)
 			UInt64 pubHandle = (*it).second.NiPubHandle;
 			RefreshMsg refresh;
 			niProvider->submit(refresh.clear().serviceName(defaultNIPubServiceName)
-            .name(pubItemName.c_str()).domainType(MMT_MARKET_PRICE)
+                        .name(pubItemName.c_str()).domainType(MMT_MARKET_PRICE)
 			.state(OmmState::OpenEnum, OmmState::OkEnum,                    
                                              OmmState::NoneEnum, "UnSolicited Refresh Completed").complete(true)
 			.payload(refreshMsg.getPayload().getFieldList()), pubHandle);
