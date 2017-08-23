@@ -36,9 +36,9 @@ void displayUsage()
 	std::cout << "The following options are supported\n\n";
 	std::cout << " -s        Followed by the subscribing service name \n";
 	std::cout << " -nip      Followed by the non-interactive publishing service name\n";
-	std::cout << " -t        Followed by a list of item names separated by space. Required by consumer and non-iteractive client publish\n\n";
-	std::cout << " -tf       Followed absolute file to filename contains item list\n";
-	std::cout << "           Note: command line options can contains either -t or -tf. If it contains both options it will use item list from last one\n\n";
+	std::cout << " -mp        Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish\n\n";
+	std::cout << " -itemfile Followed absolute file path to file contains item list\n";
+	std::cout << "           Note: command line options can contains either -mp or -filename. If it contains both options it will use item list from last one\n\n";
 	std::cout << " Optional options\n\n";
 	std::cout << " -v        Followed by a list of FID id (integer) seperated by space. Turn on OMM view request options \n\n";
 	std::cout << " -nipuser  Followed by Username for Non interactive provider, default is username\n";
@@ -51,17 +51,17 @@ void displayUsage()
 	std::cout << " -runtime  Followed by Application runtime period in second, default is 600 second\n\n";
 	std::cout << " -prefix   Followed by prefix string. It's used to rename publish item name.\n";
 	std::cout << "           For example, \n";
-	std::cout << "              use -t TRI.N -prefix TEST_ \n";
+	std::cout << "              use -mp TRI.N -prefix TEST_ \n";
 	std::cout << "           The demo application will re-publish data using item name TEST_TRI.N instead\n";
 	std::cout << "           Consumer application has to subscribe data using the new item name\n\n";
 	std::cout << "Usage:\n";
-	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -t TRI.N GOOG.O\n";
+	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N GOOG.O\n";
 	std::cout << "\tor\n";
-	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -tf ./itemlist.txt\n";
+	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -itemfile ./itemlist.txt\n";
 	std::cout << "\tcreates a service called NIPUB which derives all its items from DIRECT_FEED\n\n";
-	std::cout << "\temahybridapp.exe -s DIRECT_FEED -nip NIPUB -u username -t TRI.N -runtime 3600\n";
+	std::cout << "\temahybridapp.exe -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N -runtime 3600\n";
 	std::cout << "\tFor running the application 3600 second and then exit\n\n";
-	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -t TRI.N -v 2 3 6 11 12 13 15 16 17 18 19 21 22 25 30 31\n";
+	std::cout << "\temahybridapp -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N -v 2 3 6 11 12 13 15 16 17 18 19 21 22 25 30 31\n";
 	std::cout << "\tTo request item TRI.N with OMM view option, the application will publish only requested FID to ADH cache.\n\n";
 	std::cout << "The Demo application works in pass through mode.\n";
 	std::cout << "It will re-publish the data as is based on the data from item list user provided\n\n";
@@ -84,9 +84,9 @@ bool checkCommandLine(int argc, char* argv[])
 		{
 			if ((STRICMP(argv[i], "-s") != 0) && (STRICMP(argv[i], "-nip") != 0) && (STRICMP(argv[i], "-nipuser") != 0)
 				&& (STRICMP(argv[i], "-u") != 0) && (STRICMP(argv[i], "-pos") != 0) && (STRICMP(argv[i], "-appid") != 0)
-				&& (STRICMP(argv[i], "-t") != 0) && (STRICMP(argv[i], "-svcid") != 0) && (STRICMP(argv[i], "-d") != 0)
+				&& (STRICMP(argv[i], "-mp") != 0) && (STRICMP(argv[i], "-svcid") != 0) && (STRICMP(argv[i], "-d") != 0)
 				&& (STRICMP(argv[i], "-runtime") != 0) && (STRICMP(argv[i], "-prefix") != 0) && (STRICMP(argv[i], "-instance") != 0)
-				&& (STRICMP(argv[i], "-v") != 0) && (STRICMP(argv[i], "-tf") != 0))
+				&& (STRICMP(argv[i], "-v") != 0) && (STRICMP(argv[i], "-itemfile") != 0))
 			{
 				displayUsage();
 				return false;
@@ -121,7 +121,7 @@ bool checkCommandLine(int argc, char* argv[])
 				defaultPosition = argv[++i];
 			else if (STRICMP(argv[i], "-id") == 0)
 				defaultAppID = argv[++i];
-			else if (STRICMP(argv[i], "-tf") == 0)
+			else if (STRICMP(argv[i], "-itemfile") == 0)
 			{
 				defaultitems.clear();
 				string ricName;
@@ -163,7 +163,7 @@ bool checkCommandLine(int argc, char* argv[])
 				if (defaultView.size() > 0)
 					bUseView = true;
 			}
-			else if (STRICMP(argv[i], "-t") == 0)
+			else if (STRICMP(argv[i], "-mp") == 0)
 			{
 				defaultitems.clear();
 				i++;
@@ -218,23 +218,30 @@ int main(int argc, char* argv[])
 		
 		cout << "Publish Directory "<<defaultNIPubServiceName<<" with service id "<<defaultNIPubServiceID<<" to ADH server..." << endl;
 		try{
-			// Submit Directory to ADH
+			// Submit Directory to ADH with initial OpenLimit 50000
 			providerManager.getOmmNIProvider().submit(RefreshMsg().domainType(MMT_DIRECTORY).filter(SERVICE_INFO_FILTER | SERVICE_STATE_FILTER)
 				.payload(Map()
 				.addKeyUInt(defaultNIPubServiceID, MapEntry::AddEnum, FilterList()
 				.add(SERVICE_INFO_ID, FilterEntry::SetEnum, ElementList()
-				.addAscii(ENAME_NAME, defaultNIPubServiceName)
-				.addArray(ENAME_CAPABILITIES, OmmArray()
-				.addUInt(MMT_MARKET_PRICE)
-				.addUInt(MMT_MARKET_BY_PRICE)
-				.complete())
-				.addArray(ENAME_DICTIONARYS_USED, OmmArray()
-				.addAscii("RWFFld")
-				.addAscii("RWFEnum")
-				.complete())
+					.addAscii(ENAME_NAME, defaultNIPubServiceName)
+					.addAscii(ENAME_VENDOR, "Vender1")
+					.addUInt(ENAME_IS_SOURCE, 1)
+					.addArray(ENAME_CAPABILITIES, OmmArray().addUInt(MMT_DICTIONARY).addUInt(MMT_MARKET_PRICE).addUInt(MMT_MARKET_BY_PRICE).complete())
+					.addArray(ENAME_DICTIONARYS_USED, OmmArray().addAscii("RWFFld").addAscii("RWFEnum").complete())
+					.addArray(ENAME_DICTIONARYS_PROVIDED, OmmArray().addAscii("RWFFld").addAscii("RWFEnum").complete())
+					.addArray(ENAME_QOS, OmmArray().addQos(OmmQos::Timeliness::RealTimeEnum, OmmQos::Rate::TickByTickEnum).complete())
+					.addUInt(ENAME_SUPPS_OOB_SNAPSHOTS,0)
+					.addUInt(ENAME_ACCEPTING_CONS_STATUS, 0)
+					.addUInt(ENAME_SUPPS_QOS_RANGE, 0)
 				.complete())
 				.add(SERVICE_STATE_ID, FilterEntry::SetEnum, ElementList()
 				.addUInt(ENAME_SVC_STATE, SERVICE_UP)
+				.addUInt(ENAME_ACCEPTING_REQS,1)
+				.addState(ENAME_STATUS,OmmState::OpenEnum,OmmState::OkEnum,0,"OK")
+				.complete())
+				.add(SERVICE_LOAD_ID, FilterEntry::SetEnum, ElementList()
+				.addUInt(ENAME_LOAD_FACT, 1)
+				.addUInt(ENAME_OPEN_LIMIT, 50000)
 				.complete())
 				.complete())
 				.complete()).complete(), defaultNISourceDirectoryHandle);

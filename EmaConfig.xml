@@ -51,11 +51,11 @@
 			<!-- the directory may also be specified using OmmNiProviderConfig::addAdminMsg().			-->
 			<!-- if desired the OmmNiProviderConfig::adminControlDirectory() to UserControlEnum			-->
 			<!-- which allows applications to specify and control the directory.						-->
-			<Directory value="Directory_1"/>
+			<!-- <Directory value="Directory_1"/> -->
 			
 			<Logger value="Logger_1"/>
 
-			<XmlTraceToFile value="0"/>
+			<XmlTraceToFile value="1"/>
 		</NiProvider>
 	</NiProviderList>
 </NiProviderGroup>

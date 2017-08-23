@@ -128,7 +128,9 @@ IF NOT EXIST "$(TargetDir)itemlist.txt" ( copy "$(ProjectDir)itemlist.txt" "$(Ta
     <ClCompile Include="EMAHybridApp.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="EmaConfig.xml" />
+    <Xml Include="EmaConfig.xml">
+      <SubType>Designer</SubType>
+    </Xml>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

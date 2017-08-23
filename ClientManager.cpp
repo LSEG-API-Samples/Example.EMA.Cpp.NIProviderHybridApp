@@ -112,7 +112,9 @@ ommProvider(0)
 		providerClient1->dumpOutput(dumpOutput);
 		ommProvider = new OmmProvider(OmmNiProviderConfig().operationModel(OmmNiProviderConfig::UserDispatchEnum)
 			.addAdminMsg(Login::LoginReq().name(username).applicationId(appID)
-			.position(position).instanceId(instanceID).allowSuspectData(true).role(1).getMessage()), *providerClient1, (void*)"NIProviderClilent");
+			.position(position).instanceId(instanceID).allowSuspectData(true)
+			.providePermissionExpressions(true).providePermissionProfile(true)
+			.role(1).getMessage()), *providerClient1, (void*)"NIProviderClilent");
 
 	}
 	catch (OmmInvalidUsageException& ex)
