@@ -35,7 +35,7 @@ To avoid the issue we apply Horizontal Scaling implementation from EMA example (
 ![EMAWorkFlows](./emaworkflows.png)
 
 There are three main threads in demo application. Application main thread, Consumer Manager Thread and Provider Manager Thread. The application start from Application main thread and below steps are the description of the main work flows according to above diagram.
-1.	Application create and initialize NIProvider Manager Thread, it will create new thread for manage OmmProvider object and pass required parameters to create internal object and send login to ADH immediately. NiProvider Manager Thread also has its own OmmProviderClient with the dispatch loop for dispatch message.
+1.	Application creates and initialize NIProvider Manager Thread. It will create new thread for manage OmmProvider object and pass required parameters to create internal object and then send login to ADH immediately.NiProvider Manager Thread also has its own OmmProviderClient with the dispatch loop for dispatch message.
 
 2.	After OmmProviderClient receive OnRefresh callback, Application has to check if the connection status is up or down. Basically EMA does not have callback for connection state. Therefore we assume that if the login stream is Open and Data state is Ok, that means connection is up and ready for publish data. If the connection state is down we will stop the NIProvider Manager thread and exit the application. 
 
@@ -104,24 +104,36 @@ The first one is to configured the service using EmaConfig.xml. There are sectio
 The last one is to use OmmProvider to submit directory message to ADH. Using this approach, user can specify service information via application configuration or command line arguments. In this example we provide command line options for user to setting service information. Do not use the same service name as configured in EmaConfig.xml. Otherwise EMA will throw InvalidUsage exception. Below is sample codes we use in the example.
 
 ```CPP
-	providerManager.getOmmNIProvider().submit(RefreshMsg().domainType(MMT_DIRECTORY).filter(SERVICE_INFO_FILTER | SERVICE_STATE_FILTER)
+// Submit Directory to ADH with initial OpenLimit 50000
+providerManager.getOmmNIProvider().submit(RefreshMsg().domainType(MMT_DIRECTORY).filter(SERVICE_INFO_FILTER | SERVICE_STATE_FILTER)
 		.payload(Map()
 		.addKeyUInt(defaultNIPubServiceID, MapEntry::AddEnum, FilterList()
 		.add(SERVICE_INFO_ID, FilterEntry::SetEnum, ElementList()
 		.addAscii(ENAME_NAME, defaultNIPubServiceName)
-		.addArray(ENAME_CAPABILITIES, OmmArray()
-		.addUInt(MMT_MARKET_PRICE)
-		.addUInt(MMT_MARKET_BY_PRICE)
-		.complete())
-		.addArray(ENAME_DICTIONARYS_USED, OmmArray()
-		.addAscii("RWFFld")
-		.addAscii("RWFEnum")
-		.complete())
-		.complete())
+		.addAscii(ENAME_VENDOR, "Vender1")
+		.addUInt(ENAME_IS_SOURCE, 1)
+		.addArray(ENAME_CAPABILITIES,
+                              OmmArray().addUInt(MMT_DICTIONARY).addUInt(MMT_MARKET_PRICE)
+                              .addUInt(MMT_MARKET_BY_PRICE).complete())
+		.addArray(ENAME_DICTIONARYS_USED, OmmArray().addAscii("RWFFld")
+                              .addAscii("RWFEnum").complete())
+		.addArray(ENAME_DICTIONARYS_PROVIDED, OmmArray().addAscii("RWFFld")
+                              .addAscii("RWFEnum").complete())	 
+                              .addArray(ENAME_QOS,OmmArray().addQos(OmmQosTimeliness::RealTimeEnum, 
+                               OmmQos::Rate::TickByTickEnum).complete())
+		.addUInt(ENAME_SUPPS_OOB_SNAPSHOTS,0)
+		.addUInt(ENAME_ACCEPTING_CONS_STATUS, 0)
+		.addUInt(ENAME_SUPPS_QOS_RANGE, 0).complete())
 		.add(SERVICE_STATE_ID, FilterEntry::SetEnum, ElementList()
 		.addUInt(ENAME_SVC_STATE, SERVICE_UP)
+		.addUInt(ENAME_ACCEPTING_REQS,1)		  
+                              .addState(ENAME_STATUS,OmmState::OpenEnum,OmmState::OkEnum,0,"OK")
 		.complete())
-		.complete())
+		.add(SERVICE_LOAD_ID, FilterEntry::SetEnum, ElementList()
+		.addUInt(ENAME_LOAD_FACT, 1)
+		.addUInt(ENAME_OPEN_LIMIT, 50000)
+		.complete()).complete())
+		.complete()).complete(), defaultNISourceDirectoryHandle);
 	.complete()).complete(), defaultNISourceDirectoryHandle);
 ```
 
@@ -166,7 +178,7 @@ if (refreshMsg.getDomainType() == MMT_MARKET_PRICE)
 			UInt64 pubHandle = (*it).second.NiPubHandle;
 			RefreshMsg refresh;
 			niProvider->submit(refresh.clear().serviceName(defaultNIPubServiceName)
-                        .name(pubItemName.c_str()).domainType(MMT_MARKET_PRICE)
+            .name(pubItemName.c_str()).domainType(MMT_MARKET_PRICE)
 			.state(OmmState::OpenEnum, OmmState::OkEnum,                    
                                              OmmState::NoneEnum, "UnSolicited Refresh Completed").complete(true)
 			.payload(refreshMsg.getPayload().getFieldList()), pubHandle);
@@ -179,7 +191,7 @@ if (refreshMsg.getDomainType() == MMT_MARKET_PRICE)
 
 ### How to compile and build the example
 
-Download example OMMNIPHybridAppExample from Github. The example has been created and tested with Visual Studio 2013 and it uses Electron  SDK version 1.1.0 to build the application. We also provide make file for building the example on Linux as well.
+Download example [OMMNIPHybridAppExample](https://github.com/TR-API-Samples/Example.EMA.Cpp.NIProviderHybridApp) from Github. The example has been created and tested with Visual Studio 2013 and it uses Electron  SDK version 1.1.0 to build the application. We also provide make file for building the example on Linux as well.
  
 To build the example user has to set below environment variable before open project with Visual Studio or building the example on Linux.
 
@@ -206,71 +218,108 @@ User can specify item list in command line argument or set command line option t
 *	Example provides options for rename item when application re-publish the data. It has command line options to set item prefix string.
 *	Example supports EMA configuration file EmaConfig.xml and user has to set server information along with Non Interactive service name they want to publish in the configuration file. It can also turn on trace message using the configuration file. Please find more information about Ema Configuration from Ema C++ Configuration Guide.
 
-User can see command line options with sample usage by running command
+User has to set hostname and RSSL port for Consumer and NIProvider side in EmaConfig.xml.
+
+Default channel for OmmConsumer is Channel_1. User has to change Host and Port from the following section.
+```
+<Name value="Channel_1"/>
+			<ChannelType value="ChannelType::RSSL_SOCKET"/>
+			<CompressionType value="CompressionType::None"/>
+			<GuaranteedOutputBuffers value="5000"/>
+
+			<ConnectionPingTimeout value="30000"/>
+			
+			<!-- TcpNodelay is optional: defaulted to 1 												-->
+			<!-- possible values: 1 (tcp_nodelay option set), 0 (tcp_nodelay not set)					-->
+			<TcpNodelay value="1"/>
+			<Host value="<Subscriber Hostname/IP Address>"/>
+			<Port value="<RSSL Port>"/>
+		</Channel>
+```
+Default channel for NIProvider is Channel_10. User has to change Host and Port from the following section.
+
+```	
+		<Channel>
+			<Name value="Channel_10"/>
+			<ChannelType value="ChannelType::RSSL_SOCKET"/>
+			<GuaranteedOutputBuffers value="5000"/>
+			<ConnectionPingTimeout value="30000"/>
+			<TcpNodelay value="1"/>
+			<Host value="<ADH Hostname/IP Address>"/>
+			<Port value="<RSSL Port for Non interactive provider>"/>
+		</Channel>
+		
+```
+Using -? command line argument, it will shows help page describing command line options.
+
 >_emahybridapp.exe -?_  or _./emahybridapp -?_
 
 It will displays the following instruction
+
 ```
 EMA Consumer Non Interactive Provider Hybrid demo
 The following options are supported
 
- -s       Followed by the subscribing service name 
- -nip     Followed by the non-interactive publishing service name
- -t       Followed by a list of item names separated by space. Required by consumer and non-interactive client publish
-          or
- -tf      Followed absolute file to filename contains item list
-          Note: command line options can contains either -t or -tf. If it contains both options it will use item list from last one
+ -s        Followed by the subscribing service name 
+ -nip      Followed by the non-interactive publishing service name
+ -mp        Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish
+
+ -itemfile Followed absolute file path to file contains item list
+           Note: command line options can contains either -mp or -filename. If it contains both options it will use item list from last one
 
  Optional options
 
- -v       Followed by a list of FID id (integer) separated by space. Turn on OMM view request options 
+ -v        Followed by a list of FID id (integer) seperated by space. Turn on OMM view request options 
 
- -nipuser Followed by Username for Non interactive provider, default is username
- -u       Followed by Username for consumer side, default is username
- -pos     Followed by Position, default is 127.0.0.1/net
- -svcid   Followed by Service ID for Non Interactive publishing service, default is 8500
- -appid   Followed by Application ID, default is 256
- -d       Dump OMM Refresh and Update message to console output
- -runtime Followed by Application runtime period in second, default is 600 second
- -prefix  Followed by prefix string. It's used to rename publish item name.
-          For example, 
-              use -t TRI.N -prefix TEST_ 
-          The demo application will re-publish data using item name TEST_TRI.N instead
-          Consumer application has to subscribe data using the new item name
+ -nipuser  Followed by Username for Non interactive provider, default is username
+ -u        Followed by Username for Consumer side, default is username.
+ -pos      Followed by Position, default is 127.0.0.1/net
+ -instance Followed by NI Provier Login instance ID, default is 1.
+ -svcid    Followed by Service ID for Non Interactive publishing service, default is 8500
+ -appid	 Followed by Application ID, default is 256
+ -d        Dump OMM Refresh and Update message to console output
+ -runtime  Followed by Application runtime period in second, default is 600 second
+
+ -prefix   Followed by prefix string. It's used to rename publish item name.
+           For example, 
+              use -mp TRI.N -prefix TEST_ 
+           The demo application will re-publish data using item name TEST_TRI.N instead
+           Consumer application has to subscribe data using the new item name
 
 Usage:
-	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -t TRI.N GOOG.O
+	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N GOOG.O
 	or
-	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -tf ./itemlist.txt
+	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -itemfile ./itemlist.txt
 	creates a service called NIPUB which derives all its items from DIRECT_FEED
 
-	emahybridapp.exe -s DIRECT_FEED -nip NIPUB -u username -t TRI.N -runtime 3600
+	emahybridapp.exe -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N -runtime 3600
 	For running the application 3600 second and then exit
 
-	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -t TRI.N -v 2 3 6 11 12 13 15 16 17 18 19 21 22 25 30 31
+	emahybridapp -s DIRECT_FEED -nip NIPUB -u username -mp TRI.N -v 2 3 6 11 12 13 15 16 17 18 19 21 22 25 30 31
 	To request item TRI.N with OMM view option, the application will publish only requested FID to ADH cache.
 
 The Demo application works in pass through mode.
 It will re-publish the data as is based on the data from item list user provided
-```
-
-At least user must have the following parameter in command line argument list. Otherwise, example will display above instruction instead.
 
 ```
->./emahybridapp -s <Service for Consumer> -nip <Service for Provider> -t <Item1> <Item2> <Item3>…
+
+Basically user must have the following parameter in command line argument list. Otherwise, it will display help page instead.
+
+```
+>./emahybridapp -s <Service for Consumer> -nip <Service for Provider> -mp <Item1> <Item2> <Item3>…
 ```
 
 Or
 
 ```
-./emahybridapp -s <Service for Consumer> -nip <Service for Provider> -tf ./itemlist.txt
+./emahybridapp -s <Service for Consumer> -nip <Service for Provider> -filename ./itemlist.txt
 ```
 
 ### Sample Console output
 
 User can use view option by using -v followed by FID list. Below is the console output when using with OMM view.
 
->./_emahybridapp_ -s __API_ELEKTRON_EDGE_TOKYO__ -nip __API_ADH_NI_PUB__ -t __EUR= GBP= THB=__ -v __3 19 21 22 25 57 59__
+>./_emahybridapp_ -s __API_ELEKTRON_EDGE_TOKYO__ -nip __API_ADH_NI_PUB__ -mp __EUR= GBP= THB=__ -v __3 19 21 22 25 57 59__
 
 ```
 NIProvier OnRereshMsg Handle: 46468864 Closure: 0x6bb8a2
@@ -380,4 +429,10 @@ And below is sample console output from RFA StarterConsumer example we used to v
 …
 ```
 
+## References
 
+* Examples Consumer and NIProvider in the Elektron SDK – C/C++ (EMA) package. The package is available at the [developer community](https://developers.thomsonreuters.com/elektron/elektron-sdk-cc/downloads).
+
+* Advanced Data Hub 3.0 : Software Installation Manual in ADH 3.0 package. You can download it from the [Software Download](). It is in Category: MDS – Infra and Products: Advanced Data Hub (ADH)
+
+Download Link [GitHub](https://github.com/TR-API-Samples/Example.EMA.Cpp.NIProviderHybridApp)
