@@ -36,7 +36,7 @@ void displayUsage()
 	std::cout << "The following options are supported\n\n";
 	std::cout << " -s        Followed by the subscribing service name \n";
 	std::cout << " -nip      Followed by the non-interactive publishing service name\n";
-	std::cout << " -mp        Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish\n\n";
+	std::cout << " -mp       Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish\n\n";
 	std::cout << " -itemfile Followed absolute file path to file contains item list\n";
 	std::cout << "           Note: command line options can contains either -mp or -filename. If it contains both options it will use item list from last one\n\n";
 	std::cout << " Optional options\n\n";
