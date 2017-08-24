@@ -83,8 +83,8 @@
 			<!-- TcpNodelay is optional: defaulted to 1 												-->
 			<!-- possible values: 1 (tcp_nodelay option set), 0 (tcp_nodelay not set)					-->
 			<TcpNodelay value="1"/>
-			<Host value="192.168.27.46"/>
-			<Port value="14002"/>
+			<Host value="ADS Server"/>
+			<Port value="RSSL Port"/>
 		</Channel>
 		
 		<Channel>
@@ -93,8 +93,8 @@
 			<GuaranteedOutputBuffers value="5000"/>
 			<ConnectionPingTimeout value="30000"/>
 			<TcpNodelay value="1"/>
-			<Host value="192.168.27.12"/>
-			<Port value="14003"/>
+			<Host value="ADH Server"/>
+			<Port value="RSSL Non Interactive Port"/>
 		</Channel>
 	</ChannelList>
 </ChannelGroup>
