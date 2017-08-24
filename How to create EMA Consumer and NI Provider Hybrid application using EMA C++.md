@@ -191,7 +191,7 @@ if (refreshMsg.getDomainType() == MMT_MARKET_PRICE)
 
 ### How to compile and build the example
 
-Download example [OMMNIPHybridAppExample](https://github.com/TR-API-Samples/Example.EMA.Cpp.NIProviderHybridApp) from Github. The example has been created and tested with Visual Studio 2013 and it uses Electron  SDK version 1.1.0 to build the application. We also provide make file for building the example on Linux as well.
+Download example [OMMNIPHybridAppExample](https://github.com/TR-API-Samples/Example.EMA.Cpp.NIProviderHybridApp) from Github. The example has been created and tested with Visual Studio 2013 and it uses Elektron SDK version 1.1.0 to build the application. We also provide make file for building the example on Linux as well.
  
 To build the example user has to set below environment variable before open project with Visual Studio or building the example on Linux.
 
@@ -212,8 +212,7 @@ After building the application, it will generate _emahybridapp.exe_ on windows p
 ### How to run the example
 
 The Hybrid demo application provides the following options for user:
-* Request one or multiple items from ADS or Provider server and re-publish the data to ADH.
-User can specify item list in command line argument or set command line option to load item list from file.
+* Request one or multiple items from ADS or Provider server and re-publish the data to ADH. User can specify item list in command line argument or set command line option to load item list from file.
 *	Example provides option for user to enable OMM view and pass FID list in command line arguments.
 *	Example provides options for rename item when application re-publish the data. It has command line options to set item prefix string.
 *	Example supports EMA configuration file EmaConfig.xml and user has to set server information along with Non Interactive service name they want to publish in the configuration file. It can also turn on trace message using the configuration file. Please find more information about Ema Configuration from Ema C++ Configuration Guide.
@@ -250,7 +249,7 @@ Default channel for NIProvider is Channel_10. User has to change Host and Port f
 		</Channel>
 		
 ```
-Using -? command line argument, it will shows help page describing command line options.
+This example also provide help page. Use can use -? command line argument, it will shows help page describing command line options.
 
 >_emahybridapp.exe -?_  or _./emahybridapp -?_
 
@@ -262,7 +261,7 @@ The following options are supported
 
  -s        Followed by the subscribing service name 
  -nip      Followed by the non-interactive publishing service name
- -mp        Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish
+ -mp       Followed by a list of Market Price item names separated by space. Required by consumer and non-iteractive client publish
 
  -itemfile Followed absolute file path to file contains item list
            Note: command line options can contains either -mp or -filename. If it contains both options it will use item list from last one
